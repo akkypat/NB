@@ -120,9 +120,8 @@ db.Grades.insertMany([
   { student_id: student2, disc_id: disc1, grade: 4},
   { student_id: student2, disc_id: disc2, grade: 4}
 ]);
-```sh
-Запросы:
 ```
+# Запросы:
 1.Получение всех студентов
 ```sh
 db.Students.find({});
