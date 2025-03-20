@@ -1,248 +1,202 @@
-# mongo_db_project
-Здесь описано тестовый проект базы данных для учёта оценок студентов университета
-## Содержание
-- [Схема_БД](#Схема_БД)
-- [Создание_коллекций](#Создание_коллекций)
-- [Индексы](#Индексы)
-- [Запросы](#Запросы)
-- [Отчет](#Отчет)
-## Схема БД
-Коллекции и их связь представлены в файле "Схема БД.png"
-## Создание коллекций
-Создадим БД и подключимся к ней
+# mongo_exam
+Здесь описан порядок выполнения итогового задания по НБ.
+Развернем БД в докере и подключимся к ней.
+
+Ниже приведен скрипт для создания коллекций, а также добавление данных в них.
 ```sh
-use UniversityDB;
-```
-Скрипт для создания коллекций. В качестве альтернативы, скрипт можно сохранить в файл и запустить из файла
-```sh
-// Создание коллекции Students (Студенты)
+// Коллекция Students (Студенты)
 db.createCollection("Students", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["name", "surname", "group", "faculty", "year_of_admission"],
+      required: ["name", "surname", "group", "faculty"],
       properties: {
         name: { bsonType: "string", description: "Имя студента" },
         surname: { bsonType: "string", description: "Фамилия студента" },
         group: { bsonType: "string", description: "Группа студента" },
-        faculty: { bsonType: "string", description: "Факультет" },
-        year_of_admission: { bsonType: "int", description: "Год поступления" }
+        faculty: { bsonType: "string", description: "Факультет" }
       }
     }
   }
 });
 
-// Создание коллекции Teachers (Преподаватели)
+// Коллекция Groups (Группы)
+db.createCollection("Groups", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["group_name", "faculty", "count_stud"],
+      properties: {
+        group_name: { bsonType: "string", description: "Название группы" },
+        faculty: { bsonType: "string", description: "Факультет" },
+        count_stud: { bsonType: "int", description: "Количество студентов" }
+      }
+    }
+  }
+});
+
+// Коллекция Teachers (Преподаватели)
 db.createCollection("Teachers", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["name", "surname", "department", "position"],
+      required: ["name", "surname", "position"],
       properties: {
         name: { bsonType: "string", description: "Имя преподавателя" },
         surname: { bsonType: "string", description: "Фамилия преподавателя" },
-        department: { bsonType: "string", description: "Кафедра" },
         position: { bsonType: "string", description: "Должность" }
       }
     }
   }
 });
 
-// Создание коллекции Courses (Курсы)
-db.createCollection("Courses", {
+// Коллекция Disciplines (Дисциплины)
+db.createCollection("Disciplines", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["course_name", "teacher_id", "credits"],
+      required: ["disc_name", "teacher_id", "depar_name", "location"],
       properties: {
-        course_name: { bsonType: "string", description: "Название курса" },
+        disc_name: { bsonType: "string", description: "Название дисципилины" },
         teacher_id: { bsonType: "objectId", description: "Идентификатор преподавателя" },
-        credits: { bsonType: "int", description: "Количество кредитов" }
+        depar_name: { bsonType: "string", description: "Кафедра курса" },
+	      location: { bsonType: "string", description: "Корпус дисциплины" }
       }
     }
   }
 });
 
-// Создание коллекции Grades (Оценки)
+// Коллекция Grades (Оценки)
 db.createCollection("Grades", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["student_id", "course_id", "grade", "date"],
+      required: ["student_id", "disc_id", "grade"],
       properties: {
         student_id: { bsonType: "objectId", description: "Идентификатор студента" },
-        course_id: { bsonType: "objectId", description: "Идентификатор курса" },
-        grade: { bsonType: "int", minimum: 1, maximum: 5, description: "Оценка" },
-        date: { bsonType: "date", description: "Дата выставления оценки" }
+        disc_id: { bsonType: "objectId", description: "Идентификатор дисциплины" },
+        grade: { bsonType: "int", minimum: 1, maximum: 5, description: "Оценка" }
       }
     }
   }
 });
 
-// Создание коллекции Groups (Группы)
-db.createCollection("Groups", {
-  validator: {
-    $jsonSchema: {
-      bsonType: "object",
-      required: ["group_name", "faculty", "year_of_admission"],
-      properties: {
-        group_name: { bsonType: "string", description: "Название группы" },
-        faculty: { bsonType: "string", description: "Факультет" },
-        year_of_admission: { bsonType: "int", description: "Год поступления" }
-      }
-    }
-  }
-});
-```
-Просмотреть список созданных коллекций
-```sh
-show collections;
-```
-В файле "Коллекции.png" представлен результат
-## Индексы
-Для ускорения поиска студентов по фамилии и имени
-```sh
-db.Students.createIndex({ surname: 1, name: 1 });
-```
-Для ускорения поиска курсов по названию
-```sh
-db.Courses.createIndex({ course_name: 1 });
-```
-Для ускорения поиска оценок по студенту и курсу
-```sh
-db.Grades.createIndex({ student_id: 1, course_id: 1 });
-```
-Созданные индексы в файлах "Индексы_1.png", "Индексы_2.png"
-## Наполнение коллекций тестовыми данными
-Вставка данных в коллекцию Students
-```sh
+// Добавление данных в Students
 db.Students.insertMany([
-  { name: "Иван", surname: "Иванов", group: "ГР-101", faculty: "Информатика", year_of_admission: 2020 },
-  { name: "Мария", surname: "Петрова", group: "ГР-102", faculty: "Математика", year_of_admission: 2021 },
-  { name: "Алексей", surname: "Сидоров", group: "ГР-101", faculty: "Информатика", year_of_admission: 2020 }
+  { name: "Павел", surname: "Петров", group: "Г-1", faculty: "Физика" },
+  { name: "Татьяна", surname: "Петрова", group: "Г-2", faculty: "Химия"},
+  { name: "Иван", surname: "Волков", group: "Г-3", faculty: "Информатика"}
 ]);
-```
-Вставка данных в коллекцию Teachers
-```sh
-db.Teachers.insertMany([
-  { name: "Анна", surname: "Смирнова", department: "Кафедра информатики", position: "Доцент" },
-  { name: "Дмитрий", surname: "Козлов", department: "Кафедра математики", position: "Профессор" },
-  { name: "Ольга", surname: "Васильева", department: "Кафедра физики", position: "Ассистент" }
-]);
-```
-Вставка данных в коллекцию Courses
-```sh
-db.Courses.insertMany([
-  { course_name: "Базы данных", teacher_id: db.Teachers.findOne({ surname: "Смирнова" })._id, credits: 4 },
-  { course_name: "Математический анализ", teacher_id: db.Teachers.findOne({ surname: "Козлов" })._id, credits: 5 },
-  { course_name: "Физика", teacher_id: db.Teachers.findOne({ surname: "Васильева" })._id, credits: 3 }
-]);
-```
-Вставка данных в коллекцию Groups
-```sh
-db.Groups.insertMany([
-  { group_name: "ГР-101", faculty: "Информатика", year_of_admission: 2020 },
-  { group_name: "ГР-102", faculty: "Математика", year_of_admission: 2021 }
-]);
-```
-Вставка данных в коллекцию Grades
-```sh
-const student1 = db.Students.findOne({ surname: "Иванов" })._id;
-const student2 = db.Students.findOne({ surname: "Петрова" })._id;
-const course1 = db.Courses.findOne({ course_name: "Базы данных" })._id;
-const course2 = db.Courses.findOne({ course_name: "Математический анализ" })._id;
 
+// Добавление данных в Teachers
+db.Teachers.insertMany([
+  { name: "Джо", surname: "Рютте", position: "Помощник" },
+  { name: "Андрей", surname: "Белоусов", position: "Профессор" },
+  { name: "Владимир", surname: "Зелский", position: "Ученик" }
+]);
+
+// Добавление данных в Disciplines
+db.Disciplines.insertMany([
+  { disc_name: "Инф технологии", teacher_id: db.Teachers.findOne({ surname: "Белоусов" })._id, depar_name: "Inf" , location: "Msk"},
+  { disc_name: "Био анализ", teacher_id: db.Teachers.findOne({ surname: "Рютте" })._id, depar_name: "Bio", location: "Msk"},
+  { disc_name: "Хим явления", teacher_id: db.Teachers.findOne({ surname: "Зелский" })._id, depar_name: "Chem", location: "Spb"}
+]);
+
+// Добавление данных в Groups
+db.Groups.insertMany([
+  { group_name: "Г-1", faculty: "Физика", count_stud: 30 },
+  { group_name: "Г-2", faculty: "Химия", count_stud: 10 }
+]);
+
+const student1 = db.Students.findOne({ surname: "Петров" })._id;
+const student2 = db.Students.findOne({ surname: "Волков" })._id;
+const disc1 = db.Disciplines.findOne({ disc_name: "Инф технологии" })._id;
+const disc2 = db.Disciplines.findOne({ disc_name: "Хим явления" })._id;
+
+// Добавление данных в Grades
 db.Grades.insertMany([
-  { student_id: student1, course_id: course1, grade: 5, date: new Date("2023-10-01") },
-  { student_id: student1, course_id: course2, grade: 4, date: new Date("2023-10-02") },
-  { student_id: student2, course_id: course1, grade: 3, date: new Date("2023-10-03") },
-  { student_id: student2, course_id: course2, grade: 5, date: new Date("2023-10-04") }
+  { student_id: student1, disc_id: disc1, grade: 2},
+  { student_id: student1, disc_id: disc2, grade: 3},
+  { student_id: student2, disc_id: disc1, grade: 4},
+  { student_id: student2, disc_id: disc2, grade: 4}
 ]);
 ```
-## Запросы
-Получение списка всех студентов -> "Запрос_1.png"
+
+# Запросы:
+
+1.Получение всех студентов
 ```sh
 db.Students.find({});
 ```
-Получение списка всех курсов, которые ведёт определённый преподаватель -> "Запрос_2.png"
+2.Получение всех курсов для учителя
 ```sh
-db.Courses.find({ teacher_id: ObjectId("67cd6da3fbaa1f6974d08e1b") });
+db.Disciplines.find({ teacher_id: ObjectId("67cd6da3fbaa1f6974d08e1b") });
 ```
-Получить список всех студентов определённой группы -> "Запрос_3.png"
+3.Получить список всех студентов по группе
 ```sh
-db.Students.find({ group: "ГР-102" });
+db.Students.find({ group: "Г-1" });
 ```
-Получить список всех оценок определённого студента -> "Запрос_4.png"
+4.Получить список всех оценок студента
 ```sh
 db.Grades.find({ student_id: ObjectId("67cd6d90fbaa1f6974d08e16") });
 ```
-Получить средний балл студента по всем курсам -> "Запрос_5.png"
+5.Получить средний балл студента по всем дисциплинам
 ```sh
 db.Grades.aggregate([
   { $match: { student_id: ObjectId("67cd6d90fbaa1f6974d08e16") } },
   { $group: { _id: null, averageGrade: { $avg: "$grade" } } }
 ]);
 ```
-Получить список всех студентов, которые получили оценку выше 4 по определённому курсу -> "Запрос_6.png"
+6.Получить список студентов, которые получили > 3 по определённой дисциплине
 ```sh
 db.Grades.aggregate([
-  { $match: { course_id: ObjectId("67cd6db2fbaa1f6974d08e1d"), grade: { $gt: 4 } } },
+  { $match: { disc_id: ObjectId("67cd6db2fbaa1f6974d08e1d"), grade: { $gt: 3 } } },
   { $lookup: { from: "Students", localField: "student_id", foreignField: "_id", as: "student" } },
   { $unwind: "$student" },
   { $project: { "student.name": 1, "student.surname": 1, grade: 1 } }
 ]);
 ```
-Получить список всех преподавателей, которые ведут курсы на определённом факультете -> "Запрос_7.png"
+7.Получить список  преподавателей, которые ведут курсы по должности
 ```sh
-db.Courses.aggregate([
+db.Disciplines.aggregate([
   { $lookup: { from: "Teachers", localField: "teacher_id", foreignField: "_id", as: "teacher" } },
   { $unwind: "$teacher" },
-  { $match: { "teacher.department": "Кафедра математики" } },
-  { $project: { "teacher.name": 1, "teacher.surname": 1, course_name: 1 } }
+  { $match: { "teacher.position": "Профессор" } },
+  { $project: { "teacher.name": 1, "teacher.surname": 1, disc_name: 1 } }
 ]);
 ```
-Получить список всех студентов, которые поступили в определённом году -> "Запрос_8.png"
+8.Получить список студентов, кто учится на факультете
 ```sh
-db.Students.find({ year_of_admission: 2020 });
+db.Students.find({ faculty: "Физика" });
 ```
-Получить список всех курсов, которые имеют больше 3 кредитов -> "Запрос_9.png"
+9.Получить список дисциплин, которые находятся в Москве
 ```sh
-db.Courses.find({ credits: { $gt: 3 } });
+db.Disciplines.find({ location: "Msk" });
 ```
-Получить средний балл по каждому курсу -> "Запрос_10.png"
+10.Получить средний балл по каждому дисциплине
 ```sh
 db.Grades.aggregate([
   {
     $lookup: {
-      from: "Courses",
-      localField: "course_id",
+      from: "Disciplines",
+      localField: "disc_id",
       foreignField: "_id",
-      as: "course"
+      as: "disc"
     }
   },
-  { $unwind: "$course" },
+  { $unwind: "$disc" },
   {
     $group: {
-      _id: "$course.course_name",
+      _id: "$disc.disc_name",
       averageGrade: { $avg: "$grade" }
     }
   },
   {
     $project: {
       _id: 0,
-      course_name: "$_id",
+      disc_name: "$_id",
       averageGrade: 1
     }
   }
 ]);
 ```
-## Отчет
-База данных спроектирована с учётом основных потребностей университета. Она позволяет хранить информацию о студентах, преподавателях, курсах и оценках. Основные коллекции связаны между собой через идентификаторы, что позволяет эффективно выполнять запросы на получение данных.
-
-- Студенты и Группы связаны через поле group, что позволяет легко находить студентов по группам.
-- Курсы и Преподаватели связаны через поле teacher_id, что позволяет находить курсы, которые ведёт определённый преподаватель.
-- Оценки связывают студентов и курсы, что позволяет анализировать успеваемость студентов.
-
-Вторичные индексы добавлены для ускорения поиска по часто используемым полям, таким как фамилия студента, название курса и идентификаторы студентов и курсов в коллекции оценок.
-
-Типовые запросы охватывают основные сценарии использования базы данных, такие как поиск студентов, курсов, оценок и анализ успеваемости.
